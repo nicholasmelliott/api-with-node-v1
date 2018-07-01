@@ -1,0 +1,14 @@
+each friend in friends
+  li
+    .circle--fluid
+      .circle--fluid--cell.circle--fluid--primary
+        a.app--tweet--author
+          .app--avatar(style=`background-image: url(${friend.profileIMG})`)
+            img(src='images/f-spore.png')
+          h4= friend.name
+          p @#{friend.screenName}
+      .circle--fluid--cell
+        if friend.follow
+          a.button.button-text Unfollow
+        else
+          a.button Follow

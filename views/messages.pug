@@ -1,0 +1,11 @@
+li
+  h3
+    | Conversation with
+    a Jill Spore
+    ul.app--message--conversation
+      each message in messages
+        li.app--message--me
+          .app--avatar(style=`background-image: url(${message.senderIMG})`)
+            img(src='images/f-spore.png')
+          p.app--message--text= message.text
+          p.app--message--timestamp= message.timestamp
