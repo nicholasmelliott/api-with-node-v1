@@ -15,8 +15,6 @@ app.use(bodyParser.urlencoded({ extended : false}));
 app.set('view engine', 'pug');
 app.use(express.static('public'));
 
-
-const profIMG = [];
 const render = {
           tweetsCom: false,
           friendsCom: false,
@@ -32,6 +30,40 @@ function appRender() {
     });    
 };
 
+function getSenderInfo() {
+  const senderNames = [];
+  const promises = [];
+  for(let i = 0; i < render.messages.length; i++){
+    if(render.messages[i].sender !== undefined){
+    const x =
+      T.get('users/lookup', { user_id : render.messages[i].sender}, function (err, data, response) {
+        render.messages[i].senderIMG = data[0].profile_image_url;
+        render.messages[i].senderName = data[0].name;
+        senderNames.push(data[0].name);
+      });
+    promises.push(x);
+    }else{
+      render.messages[i].senderIMG = "./images/m-spore.png";
+    }
+  }
+  Promise.all(promises).then(values => {
+    senderNames.sort(function(a,b){
+      console.log('a: ' + a + ' b: ' + b);
+      if(a !== b){
+        if(senderNames.indexOf(a) !== senderNames.length - 2){
+          render.finalSenders.push(a + ', ');  
+        }else{
+          render.finalSenders.push(a);
+        }
+        //if it's the last non-matching pair, include the last item in array also
+        if(senderNames.indexOf(b) + 1  === senderNames.length){
+          render.finalSenders.push(b);
+        }
+      }
+    });  
+  });
+};
+  
 function getProfPic(){
   console.log('Running getProfPic');
   for(let i = 0; i < 5; i++){
@@ -44,7 +76,7 @@ function getProfPic(){
       });
   }
 };
-
+  
 //GET ACOUNT CREDENTIALS
 const account =
   T.get('account/verify_credentials', { skip_status: true }, function(err, data, response){
@@ -58,7 +90,6 @@ const account =
   }).then(() => {
     appRender();
   });
-
  
 //GET LAST 5 TWEETS
 const fiveTweets =
@@ -116,55 +147,10 @@ const fiveMessages =
     }
     
   }).then(result => {
-    console.log('render.messages: ' + render.messages[0].text);
-    return getSenderPic(); 
-    
-  }).then(result => {
-
+    getSenderInfo();
     appRender();
   });
-
-  function getSenderPic() {
-    for(let i = 0; i < render.messages.length; i++){
-      if(render.messages[i].sender !== undefined){
-        T.get('users/lookup', { user_id : render.messages[i].sender}, function (err, data, response) {
-          render.messages[i].senderIMG = data[0].profile_image_url;
-          render.messages[i].senderName = data[0].name;
-          render.senderNames.push(data[0].name);   
-          console.log('messages/sendername: ' + data[0].name);
-        });
-      }else{
-         render.messages[i].senderIMG = "./images/m-spore.png";
-      }
-    }
-  }
-
   
-  setTimeout(function(){
-    console.log('render.senderNames: ' + render.senderNames);
-    //looks for and filters out duplicate sender names
-    render.senderNames.sort(function(a,b){
-      console.log('a: ' + a + ' b: ' + b);
-      if(a !== b){
-        if(render.senderNames.indexOf(a) !== render.senderNames.length - 2){
-          render.finalSenders.push(a + ', ');  
-        }else{
-          render.finalSenders.push(a);
-        }
-        
-        //if it's the last non-matching pair, include the last item in array also
-        if(render.senderNames.indexOf(b) + 1  === render.senderNames.length){
-          render.finalSenders.push(b);
-        }
-      }
-    })
-  },5000);
-
-  setTimeout(function(){
-    console.log(render.finalSenders.length);
-    console.log(render.finalSenders);
-  },7000);
-
 app.post('/', (req, res) => {
   T.post('statuses/update', { status: req.body.text })
     .then(result => {
