@@ -15,11 +15,14 @@ app.use(bodyParser.urlencoded({ extended : false}));
 app.set('view engine', 'pug');
 app.use(express.static('public'));
 
+
 const profIMG = [];
 const render = {
           tweetsCom: false,
           friendsCom: false,
-          messagesCom: false
+          messagesCom: false,
+          senderNames: [],
+          finalSenders: []
         };
 
 function appRender() {
@@ -72,7 +75,7 @@ const fiveTweets =
       });
     }
   }).then(() => {
-    appRender();
+     appRender();
   });
 
 //GET LAST 5 FRIENDS
@@ -97,19 +100,70 @@ const fiveMessages =
   T.get('direct_messages/events/list', {count: 6},  function (err, data, response) {
     render.messagesCom = true;
     render.messages = [];
-    for(var i = 0; i < 5; i++){
-      render.messages.push({
-        text : data.events[i].message_create.message_data.text,
-        sender : data.events[i].message_create.sender_id,
-        timestamp : timeConvert(data.events[i].created_timestamp, true )
-      });
+    for(let i = 0; i < 5; i++){
+      //if no message is found from data pull
+      if(data.events[i] === undefined){
+        render.messages.push({
+          text : "No message found",
+        });
+      }else{
+        render.messages.push({
+          text : data.events[i].message_create.message_data.text,
+          timestamp : timeConvert(data.events[i].created_timestamp, true ),
+          sender : data.events[i].message_create.sender_id
+        });
+      }
     }
     
   }).then(result => {
-    setTimeout(getProfPic, 4000);
+    console.log('render.messages: ' + render.messages[0].text);
+    return getSenderPic(); 
+    
   }).then(result => {
+
     appRender();
   });
+
+  function getSenderPic() {
+    for(let i = 0; i < render.messages.length; i++){
+      if(render.messages[i].sender !== undefined){
+        T.get('users/lookup', { user_id : render.messages[i].sender}, function (err, data, response) {
+          render.messages[i].senderIMG = data[0].profile_image_url;
+          render.messages[i].senderName = data[0].name;
+          render.senderNames.push(data[0].name);   
+          console.log('messages/sendername: ' + data[0].name);
+        });
+      }else{
+         render.messages[i].senderIMG = "./images/m-spore.png";
+      }
+    }
+  }
+
+  
+  setTimeout(function(){
+    console.log('render.senderNames: ' + render.senderNames);
+    //looks for and filters out duplicate sender names
+    render.senderNames.sort(function(a,b){
+      console.log('a: ' + a + ' b: ' + b);
+      if(a !== b){
+        if(render.senderNames.indexOf(a) !== render.senderNames.length - 2){
+          render.finalSenders.push(a + ', ');  
+        }else{
+          render.finalSenders.push(a);
+        }
+        
+        //if it's the last non-matching pair, include the last item in array also
+        if(render.senderNames.indexOf(b) + 1  === render.senderNames.length){
+          render.finalSenders.push(b);
+        }
+      }
+    })
+  },5000);
+
+  setTimeout(function(){
+    console.log(render.finalSenders.length);
+    console.log(render.finalSenders);
+  },7000);
 
 app.post('/', (req, res) => {
   T.post('statuses/update', { status: req.body.text })
@@ -131,3 +185,6 @@ app.post('/', (req, res) => {
         });
     })
 });
+
+
+  

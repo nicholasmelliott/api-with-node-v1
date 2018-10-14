@@ -1,7 +1,13 @@
 li
   h3
-    | Conversation with
-    a Jill Spore
+    if messages.length === 0
+      | Conversation with no one.
+    else if messages.length > 1
+      | Conversations with
+    else
+      | Conversation with
+    each name in finalSenders   
+      a  #{name}
     ul.app--message--conversation
       each message in messages
         li.app--message--me
